@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1d1d1f">
+    <title>{{ star.name }} — M31 Galaxy Andromeda</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="app-shell feed-page">
+        <video
+            class="feed-media"
+            autoplay
+            muted
+            loop
+            playsinline
+            poster="{{ star.image_url }}"
+            aria-label="Видео звезды {{ star.name }}"
+        >
+            <source src="{{ star.video_url }}" type="video/mp4">
+        </video>
+
+        <div class="feed-shade" aria-hidden="true"></div>
+
+        <header class="feed-header">
+            <p class="eyebrow">M31</p>
+            <h1>Galaxy Andromeda</h1>
+        </header>
+
+        <div class="like-orbit" aria-label="{{ star.likes_count }} отметок нравится">
+            <span aria-hidden="true">♥</span>
+            <small>{{ star.likes_count }}</small>
+        </div>
+
+        <section class="feed-content" aria-labelledby="star-title">
+            {% if star.status == "draft" %}
+                <p class="status-label">Черновик</p>
+            {% endif %}
+
+            <p class="catalog-id">{{ star.catalog_id }}</p>
+            <h2 id="star-title">{{ star.name }}</h2>
+
+            <details class="description">
+                <summary>Описание</summary>
+                <p>{{ star.description }}</p>
+            </details>
+
+            <a
+                class="next-button"
+                href="/stars/{{ star.id }}?next=true"
+                aria-label="Открыть следующую звезду"
+            >
+                Дальше <span aria-hidden="true">→</span>
+            </a>
+
+            <div class="metrics" aria-label="Параметры звезды">
+                <div class="metric">
+                    <span>v ≈</span>
+                    <strong>{{ star.rotation_velocity_kms }} км/с</strong>
+                </div>
+                <div class="metric">
+                    <span>R =</span>
+                    <strong>{{ star.distance_kpc }} кпк</strong>
+                </div>
+            </div>
+        </section>
+
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item nav-item--active" href="/stars" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">●</span>
+                <span>Лента</span>
+            </a>
+            <a class="nav-item" href="/stars/draft">
+                <span class="nav-icon" aria-hidden="true">＋</span>
+                <span>Добавить</span>
+            </a>
+            <a class="nav-item" href="/stars/grid">
+                <span class="nav-icon" aria-hidden="true">▦</span>
+                <span>Плитка</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>

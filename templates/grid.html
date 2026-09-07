@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1d1d1f">
+    <title>Звёзды M31 — M31 Galaxy Andromeda</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main
+        class="app-shell grid-page page-with-image"
+        style="--page-image: url('{{ cover_image_url }}')"
+    >
+        <div class="page-shade" aria-hidden="true"></div>
+
+        <section class="page-content">
+            <h1>Звёзды M31</h1>
+
+            <form class="filter-form" action="/stars/grid" method="get">
+                <label for="distance-kpc" class="visually-hidden">
+                    Максимальное расстояние от центра в килопарсеках
+                </label>
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input
+                    id="distance-kpc"
+                    type="text"
+                    inputmode="decimal"
+                    name="distance_kpc"
+                    value="{{ distance_kpc }}"
+                    placeholder="R от центра, кпк — не дальше..."
+                >
+                <button type="submit">Найти</button>
+            </form>
+
+            {% if filter_active %}
+                <div class="filter-state">
+                    <span>R ≤ {{ distance_kpc }} кпк</span>
+                    <a href="/stars/grid">Сбросить</a>
+                </div>
+            {% endif %}
+
+            {% if has_stars %}
+                <div class="star-grid">
+                    {% for star in stars %}
+                        <a
+                            class="star-card"
+                            href="/stars/{{ star.id }}"
+                            data-video-url="{{ star.video_url }}"
+                        >
+                            <img src="{{ star.image_url }}" alt="{{ star.name }}">
+                            <span class="star-card__shade" aria-hidden="true"></span>
+
+                            {% if star.status == "draft" %}
+                                <span class="star-card__status">черновик</span>
+                            {% endif %}
+
+                            <div class="star-card__body">
+                                <p class="star-card__distance">R = {{ star.distance_kpc }} кпк</p>
+                                <h2>{{ star.name }}</h2>
+                                <span class="star-card__likes">
+                                    {{ star.likes_count }} <span aria-hidden="true">♥</span>
+                                </span>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <strong>Звёзды не найдены</strong>
+                    <p>Увеличь допустимое расстояние или сбрось фильтр.</p>
+                    <a href="/stars/grid">Показать все</a>
+                </div>
+            {% endif %}
+        </section>
+
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item" href="/stars">
+                <span class="nav-icon" aria-hidden="true">●</span>
+                <span>Лента</span>
+            </a>
+            <a class="nav-item" href="/stars/draft">
+                <span class="nav-icon" aria-hidden="true">＋</span>
+                <span>Добавить</span>
+            </a>
+            <a class="nav-item nav-item--active" href="/stars/grid" aria-current="page">
+                <span class="nav-icon" aria-hidden="true">▦</span>
+                <span>Плитка</span>
+            </a>
+        </nav>
+    </main>
+</body>
+</html>
