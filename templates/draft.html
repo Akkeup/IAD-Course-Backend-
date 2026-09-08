@@ -45,29 +45,16 @@
                     <input type="text" name="name" value="{{ star.name }}">
                 </label>
 
-                <div class="field-row">
-                    <label class="field">
-                        <span>R от центра, кпк</span>
-                        <input
-                            type="number"
-                            name="distance_kpc"
-                            value="{{ star.distance_kpc }}"
-                            min="0"
-                            step="0.1"
-                        >
-                    </label>
-
-                    <label class="field">
-                        <span>Скорость, км/с</span>
-                        <input
-                            type="number"
-                            name="velocity_kms"
-                            value="{{ star.velocity_kms }}"
-                            min="0"
-                            step="1"
-                        >
-                    </label>
-                </div>
+                <label class="field field--wide">
+                    <span>R от центра, кпк</span>
+                    <input
+                        type="number"
+                        name="distance_kpc"
+                        value="{{ star.distance_kpc }}"
+                        min="0"
+                        step="0.1"
+                    >
+                </label>
 
                 <label class="field field--wide">
                     <span>Описание</span>
