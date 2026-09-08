@@ -543,10 +543,16 @@ a {
     gap: 14px;
 }
 
+.star-grid__sentinel {
+    height: 1px;
+}
+
 .star-card {
     position: relative;
     min-height: 184px;
     overflow: hidden;
+    content-visibility: auto;
+    contain-intrinsic-size: 184px;
     border: 1px solid rgba(232, 234, 237, 0.14);
     border-radius: 15px;
     background: #1b2637;

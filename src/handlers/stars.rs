@@ -28,7 +28,8 @@ use crate::{
     models::{
         AppState,
         Star,
-        StarStatus
+        StarStatus,
+        calculate_velocity_kms
     }
 };
 
@@ -40,6 +41,7 @@ pub struct FeedQuery {
 #[derive(Debug, Deserialize)]
 pub struct StarsFilter {
     distance_kpc: Option<String>,
+    page: Option<usize>,
 }
 
 #[derive(Debug, Serialize)]
@@ -48,7 +50,7 @@ struct StarTemplate {
     name: String,
     catalog_id: String,
     distance_kpc: f32,
-    rotation_velocity_kms: u16,
+    velocity_kms: u16,
     status: StarStatus,
     description: String,
     image_url: String,
@@ -227,7 +229,7 @@ pub async fn get_stars_grid(
         Some(distance)
     };
 
-    let mut stars: Vec<StarTemplate> = Vec::new();
+    let mut filtered_stars: Vec<StarTemplate> = Vec::new();
 
     for star in &state.stars {
         if !star.is_visible() {
@@ -240,8 +242,18 @@ pub async fn get_stars_grid(
             }
         }
 
-        stars.push(make_star_template(star));
+        filtered_stars.push(make_star_template(star));
     }
+
+    let page_size = 20;
+    let page_number = query.page.unwrap_or(1).max(1);
+    let page_start = page_number.saturating_sub(1).saturating_mul(page_size);
+    let has_more = page_start.saturating_add(page_size) < filtered_stars.len();
+    let stars: Vec<StarTemplate> = filtered_stars
+        .into_iter()
+        .skip(page_start)
+        .take(page_size)
+        .collect();
 
     let cover_image_url = match stars.first() {
         Some(first_star) => first_star.image_url.clone(),
@@ -256,6 +268,8 @@ pub async fn get_stars_grid(
     context.insert("distance_kpc", &raw_distance);
     context.insert("filter_active", &filter_active);
     context.insert("cover_image_url", &cover_image_url);
+    context.insert("next_page", &page_number.saturating_add(1));
+    context.insert("has_more", &has_more);
 
     let page = templates.render("grid.html", &context)?;
 
@@ -272,7 +286,7 @@ fn make_star_template(star: &Star) -> StarTemplate {
         name: star.name.clone(),
         catalog_id: star.catalog_id.clone(),
         distance_kpc: star.distance_kpc,
-        rotation_velocity_kms: star.rotation_velocity_kms,
+        velocity_kms: calculate_velocity_kms(star.distance_kpc),
         status: star.status.clone(),
         description: star.description.clone(),
         image_url: star.image_url.clone(),

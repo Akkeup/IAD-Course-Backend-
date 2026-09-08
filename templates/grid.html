@@ -41,14 +41,23 @@
             {% endif %}
 
             {% if has_stars %}
-                <div class="star-grid">
+                <div
+                    class="star-grid"
+                    data-next-page="{{ next_page }}"
+                    data-has-more="{{ has_more }}"
+                >
                     {% for star in stars %}
                         <a
                             class="star-card"
                             href="/stars/{{ star.id }}"
                             data-video-url="{{ star.video_url }}"
                         >
-                            <img src="{{ star.image_url }}" alt="{{ star.name }}">
+                            <img
+                                src="{{ star.image_url }}"
+                                alt="{{ star.name }}"
+                                loading="lazy"
+                                decoding="async"
+                            >
                             <span class="star-card__shade" aria-hidden="true"></span>
 
                             {% if star.status == "draft" %}
@@ -65,6 +74,7 @@
                         </a>
                     {% endfor %}
                 </div>
+                <div class="star-grid__sentinel" aria-hidden="true"></div>
             {% else %}
                 <div class="empty-state">
                     <strong>Звёзды не найдены</strong>
@@ -89,5 +99,50 @@
             </a>
         </nav>
     </main>
+
+    <script>
+        const starGrid = document.querySelector(".star-grid");
+        const sentinel = document.querySelector(".star-grid__sentinel");
+
+        if (starGrid && sentinel) {
+            const loadNextPage = async () => {
+                if (starGrid.dataset.loading === "true" || starGrid.dataset.hasMore !== "true") {
+                    return;
+                }
+
+                starGrid.dataset.loading = "true";
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set("page", starGrid.dataset.nextPage);
+
+                try {
+                    const response = await fetch(nextUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const html = await response.text();
+                    const documentFragment = new DOMParser()
+                        .parseFromString(html, "text/html");
+                    const nextGrid = documentFragment.querySelector(".star-grid");
+
+                    if (!nextGrid) {
+                        return;
+                    }
+
+                    starGrid.append(...nextGrid.children);
+                    starGrid.dataset.nextPage = nextGrid.dataset.nextPage;
+                    starGrid.dataset.hasMore = nextGrid.dataset.hasMore;
+                } finally {
+                    starGrid.dataset.loading = "false";
+                }
+            };
+
+            new IntersectionObserver((entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    loadNextPage();
+                }
+            }, { rootMargin: "320px" }).observe(sentinel);
+        }
+    </script>
 </body>
 </html>

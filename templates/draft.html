@@ -61,8 +61,8 @@
                         <span>Скорость, км/с</span>
                         <input
                             type="number"
-                            name="rotation_velocity_kms"
-                            value="{{ star.rotation_velocity_kms }}"
+                            name="velocity_kms"
+                            value="{{ star.velocity_kms }}"
                             min="0"
                             step="1"
                         >
@@ -73,10 +73,6 @@
                     <span>Описание</span>
                     <textarea name="description" rows="5">{{ star.description }}</textarea>
                 </label>
-
-                <p class="form-note">
-                    Поля можно заполнять, но в первой лабораторной данные не сохраняются.
-                </p>
             </form>
         </section>
 

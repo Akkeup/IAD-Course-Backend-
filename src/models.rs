@@ -2,7 +2,7 @@ use serde::{
     Deserialize, Serialize
 };
 use std::{
-    format, env
+    env, f32, format
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -19,12 +19,47 @@ pub struct Star {
     pub name: String,
     pub catalog_id: String,
     pub distance_kpc: f32,
-    pub rotation_velocity_kms: u16,
     pub status: StarStatus,
     pub description: String,
     pub image_url: String,
     pub video_url: String,
     pub likes: Vec<u32>
+}
+
+const ANDROMEDA_ROTATION_CURVE: &[(f32, u16)] = &[
+    (0.0, 0),
+    (2.0, 140),
+    (4.0, 190),
+    (6.3, 218),
+    (8.7, 220),
+    (18.4, 225),
+    (22.6, 220),
+    (25.0, 220),
+    (30.0, 205),
+    (33.5, 185),
+];
+
+pub fn calculate_velocity_kms(distance_kpc: f32) -> u16 {
+    let distance_kpc = distance_kpc.max(0.0);
+
+    for curve_segment in ANDROMEDA_ROTATION_CURVE.windows(2) {
+        let (left_distance, left_velocity) = curve_segment[0];
+        let (right_distance, right_velocity) = curve_segment[1];
+
+        if distance_kpc <= right_distance {
+            let distance_fraction =
+                (distance_kpc - left_distance) / (right_distance - left_distance);
+            let velocity = left_velocity as f32
+                + distance_fraction * (right_velocity as f32 - left_velocity as f32);
+
+            return velocity.round() as u16;
+        }
+    }
+
+    ANDROMEDA_ROTATION_CURVE
+        .last()
+        .map(|(_, velocity)| *velocity)
+        .unwrap_or(0)
 }
 
 impl Star {
@@ -79,7 +114,6 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-V1".to_owned(),
             catalog_id: "M31-V1".to_owned(),
             distance_kpc: 18.4,
-            rotation_velocity_kms: 225,
             status: StarStatus::Published,
             description: "Переменная звезда типа цефеиды, наблюдения которой помогли Эдвину Хабблу подтвердить, что Андромеда находится за пределами Млечного Пути. Скорость дана по учебной выборке точек кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-v1.webp"),
@@ -91,7 +125,6 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-1775".to_owned(),
             catalog_id: "J004047.84+405602.6".to_owned(),
             distance_kpc: 18.4,
-            rotation_velocity_kms: 225,
             status: StarStatus::Draft,
             description: "Красный сверхгигант с необычно сильным покраснением спектра. В каталоге LGGS объект обозначен координатным идентификатором J004047.84+405602.6.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1775.webp"),
@@ -103,7 +136,6 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-1515".to_owned(),
             catalog_id: "J004124.80+411634.7".to_owned(),
             distance_kpc: 8.7,
-            rotation_velocity_kms: 220,
             status: StarStatus::Published,
             description: "Красный сверхгигант спектрального класса M3 I. Избыток излучения в ближнем ультрафиолете может указывать на горячий звёздный компонент.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1515.webp"),
@@ -115,7 +147,6 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-2252".to_owned(),
             catalog_id: "J004424.94+412322.3".to_owned(),
             distance_kpc: 22.6,
-            rotation_velocity_kms: 220,
             status: StarStatus::Published,
             description: "Яркий красный сверхгигант в диске M31. Его положение соответствует почти плоской части кривой вращения галактики.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-2252.webp"),
@@ -127,7 +158,6 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-1372".to_owned(),
             catalog_id: "J004454.38+412441.6".to_owned(),
             distance_kpc: 6.3,
-            rotation_velocity_kms: 218,
             status: StarStatus::Published,
             description: "Красный сверхгигант спектрального класса M2 I из выборки звёзд Андромеды с подтверждённой лучевой скоростью.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1372.webp"),
@@ -139,31 +169,28 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             name: "M31-504".to_owned(),
             catalog_id: "J004447.08+412801.7".to_owned(),
             distance_kpc: 25.0,
-            rotation_velocity_kms: 220,
             status: StarStatus::Published,
             description: "Красный сверхгигант спектрального класса M2.5 I у внешней границы почти плоской части кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-504.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-504.mp4"),
             likes: like_ids(41),
         },
-        Star {
-            id: 7,
-            name: "M31-1414".to_owned(),
-            catalog_id: "J004501.30+413922.5".to_owned(),
-            distance_kpc: 30.8,
-            rotation_velocity_kms: 196,
-            status: StarStatus::Published,
-            description: "Красный сверхгигант спектрального класса M3 I. На таком расстоянии учебная аппроксимация показывает постепенное снижение скорости вращения.".to_owned(),
-            image_url: media_url(minio_public_url, minio_bucket, "images/m31-1414.webp"),
-            video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1414.mp4"),
-            likes: like_ids(73),
-        },
+        // Star {
+        //     id: 7,
+        //     name: "M31-1414".to_owned(),
+        //     catalog_id: "J004501.30+413922.5".to_owned(),
+        //     distance_kpc: 30.8,
+        //     status: StarStatus::Published,
+        //     description: "Красный сверхгигант спектрального класса M3 I. На таком расстоянии учебная аппроксимация показывает постепенное снижение скорости вращения.".to_owned(),
+        //     image_url: media_url(minio_public_url, minio_bucket, "images/m31-1414.webp"),
+        //     video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1414.mp4"),
+        //     likes: like_ids(73),
+        // },
         Star {
             id: 8,
             name: "M31-1494".to_owned(),
             catalog_id: "J004514.95+414625.6".to_owned(),
             distance_kpc: 33.5,
-            rotation_velocity_kms: 185,
             status: StarStatus::Deleted,
             description: "Удалённая карточка используется для проверки бизнес-правила и не должна попадать ни на одну страницу интерфейса.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1494.webp"),
