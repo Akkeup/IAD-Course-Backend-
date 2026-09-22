@@ -1,36 +1,16 @@
 use std::format;
 
 use actix_web::{
-    HttpResponse,
-    get,
-    http::{
-        header::ContentType
-    },
-    web::{
-        Data,
-        Path,
-        Query
-    }
+    HttpResponse, get,
+    http::header::ContentType,
+    web::{Data, Path, Query},
 };
-use serde::{
-    Deserialize,
-    Serialize
-};
-use tera::{
-    Context,
-    Tera
-};
+use serde::{Deserialize, Serialize};
+use tera::{Context, Tera};
 
 use crate::{
-    errors::{
-        AppError
-    },
-    models::{
-        AppState,
-        Star,
-        StarStatus,
-        calculate_velocity_kms
-    }
+    errors::AppError,
+    models::{AppState, Star, StarStatus, calculate_velocity_kms},
 };
 
 #[derive(Debug, Deserialize)]
@@ -58,7 +38,7 @@ struct StarTemplate {
     likes_count: usize,
 }
 
-#[get("/stars")]
+#[get("/andromeda-stars")]
 pub async fn get_stars(
     query: Query<FeedQuery>,
     state: Data<AppState>,
@@ -73,9 +53,7 @@ pub async fn get_stars(
     }
 
     if visible_stars.is_empty() {
-        return Err(AppError::NotFound(
-            "доступные звёзды".to_owned()
-        ));
+        return Err(AppError::NotFound("доступные звёзды".to_owned()));
     }
 
     let mut current_index = 0;
@@ -95,14 +73,12 @@ pub async fn get_stars(
 
     let page = templates.render("feed.html", &context)?;
 
-    Ok(
-        HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body(page)
-    )
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(page))
 }
 
-#[get("/stars/{id}")]
+#[get("/andromeda-stars/{id}")]
 pub async fn get_star(
     id: Path<u32>,
     query: Query<FeedQuery>,
@@ -118,26 +94,22 @@ pub async fn get_star(
     }
 
     if visible_stars.is_empty() {
-        return Err(AppError::NotFound(
-            "доступные звёзды".to_owned()
-        ));
+        return Err(AppError::NotFound("доступные звёзды".to_owned()));
     }
 
     let requested_id = id.into_inner();
 
     let found_index = visible_stars
         .iter()
-        .position(|star| star.id == requested_id);
+        .position(|star| star.star_id == requested_id);
 
     let mut current_index = match found_index {
         Some(index) => index,
         None => {
-            return Err(AppError::NotFound(
-                format!(
-                    "звезда с id {} отсутствует или удалена",
-                    requested_id
-                )
-            ));
+            return Err(AppError::NotFound(format!(
+                "звезда с id {} отсутствует или удалена",
+                requested_id
+            )));
         }
     };
 
@@ -156,14 +128,12 @@ pub async fn get_star(
 
     let page = templates.render("feed.html", &context)?;
 
-    Ok(
-        HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body(page)
-    )
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(page))
 }
 
-#[get("/stars/draft")]
+#[get("/andromeda-stars/draft")]
 pub async fn get_draft(
     state: Data<AppState>,
     templates: Data<Tera>,
@@ -171,13 +141,13 @@ pub async fn get_draft(
     let draft = state
         .stars
         .iter()
-        .find(|star| star.status == StarStatus::Draft);
+        .find(|star| star.star_status == StarStatus::Draft);
 
     let star = match draft {
         Some(star) => star,
         None => {
             return Err(AppError::NotFound("черновик звезды".to_owned()));
-        },
+        }
     };
 
     let star_template = make_star_template(star);
@@ -187,14 +157,12 @@ pub async fn get_draft(
 
     let page = templates.render("draft.html", &context)?;
 
-    Ok(
-        HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body(page)
-    )
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(page))
 }
 
-#[get("/stars/grid")]
+#[get("/andromeda-stars/grid")]
 pub async fn get_stars_grid(
     query: Query<StarsFilter>,
     state: Data<AppState>,
@@ -215,14 +183,14 @@ pub async fn get_stars_grid(
             Ok(value) => value,
             Err(_) => {
                 return Err(AppError::Validation(
-                    "distance_kpc должен быть числом, например 18.4".to_owned()
+                    "distance_kpc должен быть числом, например 18.4".to_owned(),
                 ));
-            },
+            }
         };
 
         if !distance.is_finite() || distance < 0.0 {
             return Err(AppError::Validation(
-                "distance_kpc должен быть конечным неотрицательным числом".to_owned()
+                "distance_kpc должен быть конечным неотрицательным числом".to_owned(),
             ));
         }
 
@@ -273,22 +241,20 @@ pub async fn get_stars_grid(
 
     let page = templates.render("grid.html", &context)?;
 
-    Ok(
-        HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body(page)
-    )
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(page))
 }
 
 fn make_star_template(star: &Star) -> StarTemplate {
     StarTemplate {
-        id: star.id,
-        name: star.name.clone(),
-        catalog_id: star.catalog_id.clone(),
+        id: star.star_id,
+        name: star.star_name.clone(),
+        catalog_id: star.star_catalog_id.clone(),
         distance_kpc: format!("{:.1}", star.distance_kpc),
         velocity_kms: calculate_velocity_kms(star.distance_kpc),
-        status: star.status.clone(),
-        description: star.description.clone(),
+        status: star.star_status.clone(),
+        description: star.star_description.clone(),
         image_url: star.image_url.clone(),
         video_url: star.video_url.clone(),
         likes_count: star.likes_count(),

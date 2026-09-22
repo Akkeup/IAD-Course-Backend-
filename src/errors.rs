@@ -1,15 +1,6 @@
-use std::fmt::{
-    self,
-    Display,
-    Formatter
-};
+use std::fmt::{self, Display, Formatter};
 
-use actix_web::{
-    http::{
-        StatusCode
-    },
-    ResponseError
-};
+use actix_web::{ResponseError, http::StatusCode};
 
 #[derive(Debug)]
 pub enum AppError {

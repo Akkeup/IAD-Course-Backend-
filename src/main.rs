@@ -3,39 +3,13 @@ mod handlers;
 mod models;
 mod routes;
 
-use std::{
-    env,
-    format,
-    io
-};
+use std::{env, format, io};
 
-use actix_files::{
-    Files
-};
-use actix_web::{
-    App,
-    HttpServer,
-    HttpResponse,
-    web::{
-        Data
-    },
-    get
-};
-use tera::{
-    Tera
-};
+use actix_files::Files;
+use actix_web::{App, HttpResponse, HttpServer, get, web::Data};
+use tera::Tera;
 
-use crate::{
-    models::{
-        AppState
-    },
-    routes::{
-        config_routes
-    },
-    errors::{
-        AppError
-    }
-};
+use crate::{errors::AppError, models::AppState, routes::config_routes};
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
@@ -55,17 +29,17 @@ async fn main() -> io::Result<()> {
     let state = Data::new(AppState::from_env());
     let static_directory = format!("{}/static", env!("CARGO_MANIFEST_DIR"));
 
-    println!("M31 Stars запущен: http://{}/stars", bind_address);
+    println!(
+        "Andromeda Stars запущен: http://{}/andromeda-stars",
+        bind_address
+    );
 
     HttpServer::new(move || {
         App::new()
             .app_data(templates.clone())
             .app_data(state.clone())
             .configure(config_routes)
-            .service(
-                Files::new("/static", static_directory.clone())
-                    .prefer_utf8(true)
-            )
+            .service(Files::new("/static", static_directory.clone()).prefer_utf8(true))
     })
     .bind(bind_address.as_str())?
     .run()
@@ -74,5 +48,5 @@ async fn main() -> io::Result<()> {
 
 #[get("/")]
 async fn mainpage() -> Result<HttpResponse, AppError> {
-    Ok(HttpResponse::Ok().body(format!("Scary Spooky Skeleton")))
-}   
+    Ok(HttpResponse::Ok().body("Andromeda Stars API"))
+}

@@ -17,7 +17,7 @@
         <section class="page-content">
             <h1>Звёзды M31</h1>
 
-            <form class="filter-form" action="/stars/grid" method="get">
+            <form class="filter-form" action="/andromeda-stars/grid" method="get">
                 <label for="distance-kpc" class="visually-hidden">
                     Максимальное расстояние от центра в килопарсеках
                 </label>
@@ -36,7 +36,7 @@
             {% if filter_active %}
                 <div class="filter-state">
                     <span>R ≤ {{ distance_kpc }} кпк</span>
-                    <a href="/stars/grid">Сбросить</a>
+                    <a href="/andromeda-stars/grid">Сбросить</a>
                 </div>
             {% endif %}
 
@@ -49,7 +49,7 @@
                     {% for star in stars %}
                         <a
                             class="star-card"
-                            href="/stars/{{ star.id }}"
+                            href="/andromeda-stars/{{ star.id }}"
                             data-video-url="{{ star.video_url }}"
                         >
                             <img
@@ -79,21 +79,21 @@
                 <div class="empty-state">
                     <strong>Звёзды не найдены</strong>
                     <p>Увеличь допустимое расстояние или сбрось фильтр.</p>
-                    <a href="/stars/grid">Показать все</a>
+                    <a href="/andromeda-stars/grid">Показать все</a>
                 </div>
             {% endif %}
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item" href="/stars">
+            <a class="nav-item" href="/andromeda-stars">
                 <span class="nav-icon" aria-hidden="true">●</span>
                 <span>Лента</span>
             </a>
-            <a class="nav-item" href="/stars/draft">
+            <a class="nav-item" href="/andromeda-stars/draft">
                 <span class="nav-icon" aria-hidden="true">＋</span>
                 <span>Добавить</span>
             </a>
-            <a class="nav-item nav-item--active" href="/stars/grid" aria-current="page">
+            <a class="nav-item nav-item--active" href="/andromeda-stars/grid" aria-current="page">
                 <span class="nav-icon" aria-hidden="true">▦</span>
                 <span>Плитка</span>
             </a>

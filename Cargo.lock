@@ -252,6 +252,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "andromeda-stars-backend"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-web",
+ "dotenvy",
+ "serde",
+ "tera",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -648,17 +659,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "707114b52a152fa7bdb290cd7cd5912d9467273b6d74e21b8d81aca1f8533f6b"
 dependencies = [
  "typenum",
-]
-
-[[package]]
-name = "iad-course-backend"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-web",
- "dotenvy",
- "serde",
- "tera",
 ]
 
 [[package]]

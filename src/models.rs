@@ -1,29 +1,25 @@
-use serde::{
-    Deserialize, Serialize
-};
-use std::{
-    env, f32, format
-};
+use serde::{Deserialize, Serialize};
+use std::{env, f32, format};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum StarStatus {
     Draft,
     Published,
-    Deleted
+    Deleted,
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Star {
-    pub id: u32,
-    pub name: String,
-    pub catalog_id: String,
+    pub star_id: u32,
+    pub star_name: String,
+    pub star_catalog_id: String,
     pub distance_kpc: f32,
-    pub status: StarStatus,
-    pub description: String,
+    pub star_status: StarStatus,
+    pub star_description: String,
     pub image_url: String,
     pub video_url: String,
-    pub likes: Vec<u32>
+    pub likes: Vec<u32>,
 }
 
 const ANDROMEDA_ROTATION_CURVE: &[(f32, u16)] = &[
@@ -68,21 +64,21 @@ impl Star {
     }
 
     pub fn is_visible(&self) -> bool {
-        return self.status != StarStatus::Deleted;
+        return self.star_status != StarStatus::Deleted;
     }
 }
 
 #[derive(Debug)]
 pub struct AppState {
-    pub stars: Vec<Star>
+    pub stars: Vec<Star>,
 }
 
 impl AppState {
     pub fn from_env() -> Self {
-        let minio_public_url = env::var("MINIO_PUBLIC_URL")
+        let minio_public_url = env::var("ANDROMEDA_MINIO_PUBLIC_URL")
             .unwrap_or_else(|_| "http://127.0.0.1:9000".to_owned());
-        let minio_bucket = env::var("MINIO_BUCKET")
-            .unwrap_or_else(|_| "andromeda".to_owned());
+        let minio_bucket =
+            env::var("ANDROMEDA_MINIO_BUCKET").unwrap_or_else(|_| "andromeda-stars".to_owned());
 
         Self::new(&minio_public_url, &minio_bucket)
     }
@@ -110,67 +106,67 @@ fn like_ids(count: u32) -> Vec<u32> {
 fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
     return vec![
         Star {
-            id: 1,
-            name: "M31-V1".to_owned(),
-            catalog_id: "M31-V1".to_owned(),
+            star_id: 1,
+            star_name: "M31-V1".to_owned(),
+            star_catalog_id: "M31-V1".to_owned(),
             distance_kpc: 18.4,
-            status: StarStatus::Published,
-            description: "Переменная звезда типа цефеиды, наблюдения которой помогли Эдвину Хабблу подтвердить, что Андромеда находится за пределами Млечного Пути. Скорость дана по учебной выборке точек кривой вращения M31.".to_owned(),
+            star_status: StarStatus::Published,
+            star_description: "Переменная звезда типа цефеиды, наблюдения которой помогли Эдвину Хабблу подтвердить, что Андромеда находится за пределами Млечного Пути. Скорость дана по учебной выборке точек кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-v1.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-v1.mp4"),
             likes: like_ids(135),
         },
         Star {
-            id: 2,
-            name: "M31-1775".to_owned(),
-            catalog_id: "J004047.84+405602.6".to_owned(),
+            star_id: 2,
+            star_name: "M31-1775".to_owned(),
+            star_catalog_id: "J004047.84+405602.6".to_owned(),
             distance_kpc: 18.4,
-            status: StarStatus::Draft,
-            description: "Красный сверхгигант с необычно сильным покраснением спектра. В каталоге LGGS объект обозначен координатным идентификатором J004047.84+405602.6.".to_owned(),
+            star_status: StarStatus::Draft,
+            star_description: "Красный сверхгигант с необычно сильным покраснением спектра. В каталоге LGGS объект обозначен координатным идентификатором J004047.84+405602.6.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1775.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1775.mp4"),
             likes: like_ids(22),
         },
         Star {
-            id: 3,
-            name: "M31-1515".to_owned(),
-            catalog_id: "J004124.80+411634.7".to_owned(),
+            star_id: 3,
+            star_name: "M31-1515".to_owned(),
+            star_catalog_id: "J004124.80+411634.7".to_owned(),
             distance_kpc: 8.7,
-            status: StarStatus::Published,
-            description: "Красный сверхгигант спектрального класса M3 I. Избыток излучения в ближнем ультрафиолете может указывать на горячий звёздный компонент.".to_owned(),
+            star_status: StarStatus::Published,
+            star_description: "Красный сверхгигант спектрального класса M3 I. Избыток излучения в ближнем ультрафиолете может указывать на горячий звёздный компонент.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1515.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1515.mp4"),
             likes: like_ids(56),
         },
         Star {
-            id: 4,
-            name: "M31-2252".to_owned(),
-            catalog_id: "J004424.94+412322.3".to_owned(),
+            star_id: 4,
+            star_name: "M31-2252".to_owned(),
+            star_catalog_id: "J004424.94+412322.3".to_owned(),
             distance_kpc: 22.6,
-            status: StarStatus::Published,
-            description: "Яркий красный сверхгигант в диске M31. Его положение соответствует почти плоской части кривой вращения галактики.".to_owned(),
+            star_status: StarStatus::Published,
+            star_description: "Яркий красный сверхгигант в диске M31. Его положение соответствует почти плоской части кривой вращения галактики.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-2252.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-2252.mp4"),
             likes: like_ids(144),
         },
         Star {
-            id: 5,
-            name: "M31-1372".to_owned(),
-            catalog_id: "J004454.38+412441.6".to_owned(),
+            star_id: 5,
+            star_name: "M31-1372".to_owned(),
+            star_catalog_id: "J004454.38+412441.6".to_owned(),
             distance_kpc: 6.3,
-            status: StarStatus::Published,
-            description: "Красный сверхгигант спектрального класса M2 I из выборки звёзд Андромеды с подтверждённой лучевой скоростью.".to_owned(),
+            star_status: StarStatus::Published,
+            star_description: "Красный сверхгигант спектрального класса M2 I из выборки звёзд Андромеды с подтверждённой лучевой скоростью.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1372.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1372.mp4"),
             likes: like_ids(89),
         },
         Star {
-            id: 6,
-            name: "M31-504".to_owned(),
-            catalog_id: "J004447.08+412801.7".to_owned(),
+            star_id: 6,
+            star_name: "M31-504".to_owned(),
+            star_catalog_id: "J004447.08+412801.7".to_owned(),
             distance_kpc: 25.0,
-            status: StarStatus::Published,
-            description: "Красный сверхгигант спектрального класса M2.5 I у внешней границы почти плоской части кривой вращения M31.".to_owned(),
+            star_status: StarStatus::Published,
+            star_description: "Красный сверхгигант спектрального класса M2.5 I у внешней границы почти плоской части кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-504.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-504.mp4"),
             likes: like_ids(41),
@@ -187,12 +183,12 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
         //     likes: like_ids(73),
         // },
         Star {
-            id: 8,
-            name: "M31-1494".to_owned(),
-            catalog_id: "J004514.95+414625.6".to_owned(),
+            star_id: 8,
+            star_name: "M31-1494".to_owned(),
+            star_catalog_id: "J004514.95+414625.6".to_owned(),
             distance_kpc: 33.5,
-            status: StarStatus::Deleted,
-            description: "Удалённая карточка используется для проверки бизнес-правила и не должна попадать ни на одну страницу интерфейса.".to_owned(),
+            star_status: StarStatus::Deleted,
+            star_description: "Удалённая карточка используется для проверки бизнес-правила и не должна попадать ни на одну страницу интерфейса.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1494.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1494.mp4"),
             likes: like_ids(12),
