@@ -78,7 +78,7 @@ impl AppState {
         let minio_public_url = env::var("ANDROMEDA_MINIO_PUBLIC_URL")
             .unwrap_or_else(|_| "http://127.0.0.1:9000".to_owned());
         let minio_bucket =
-            env::var("ANDROMEDA_MINIO_BUCKET").unwrap_or_else(|_| "andromeda-stars".to_owned());
+            env::var("ANDROMEDA_MINIO_BUCKET").unwrap_or_else(|_| "andromeda".to_owned());
 
         Self::new(&minio_public_url, &minio_bucket)
     }
@@ -103,8 +103,28 @@ fn like_ids(count: u32) -> Vec<u32> {
     (1..=count).collect()
 }
 
+fn assign_likes_from_next_card(stars: &mut [Star]) {
+    let visible_ids: Vec<u32> = stars
+        .iter()
+        .filter(|star| star.is_visible())
+        .map(|star| star.star_id)
+        .collect();
+
+    let mut visible_index = 0;
+
+    for star in stars.iter_mut() {
+        if !star.is_visible() || visible_ids.is_empty() {
+            continue;
+        }
+
+        let next_id = visible_ids[(visible_index + 1) % visible_ids.len()];
+        star.likes = like_ids(next_id);
+        visible_index += 1;
+    }
+}
+
 fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
-    return vec![
+    let mut stars = vec![
         Star {
             star_id: 1,
             star_name: "M31-V1".to_owned(),
@@ -114,7 +134,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Переменная звезда типа цефеиды, наблюдения которой помогли Эдвину Хабблу подтвердить, что Андромеда находится за пределами Млечного Пути. Скорость дана по учебной выборке точек кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-v1.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-v1.mp4"),
-            likes: like_ids(135),
+            likes: Vec::new(),
         },
         Star {
             star_id: 2,
@@ -125,7 +145,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Красный сверхгигант с необычно сильным покраснением спектра. В каталоге LGGS объект обозначен координатным идентификатором J004047.84+405602.6.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1775.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1775.mp4"),
-            likes: like_ids(22),
+            likes: Vec::new(),
         },
         Star {
             star_id: 3,
@@ -136,7 +156,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Красный сверхгигант спектрального класса M3 I. Избыток излучения в ближнем ультрафиолете может указывать на горячий звёздный компонент.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1515.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1515.mp4"),
-            likes: like_ids(56),
+            likes: Vec::new(),
         },
         Star {
             star_id: 4,
@@ -147,7 +167,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Яркий красный сверхгигант в диске M31. Его положение соответствует почти плоской части кривой вращения галактики.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-2252.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-2252.mp4"),
-            likes: like_ids(144),
+            likes: Vec::new(),
         },
         Star {
             star_id: 5,
@@ -158,7 +178,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Красный сверхгигант спектрального класса M2 I из выборки звёзд Андромеды с подтверждённой лучевой скоростью.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1372.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1372.mp4"),
-            likes: like_ids(89),
+            likes: Vec::new(),
         },
         Star {
             star_id: 6,
@@ -169,7 +189,7 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Красный сверхгигант спектрального класса M2.5 I у внешней границы почти плоской части кривой вращения M31.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-504.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-504.mp4"),
-            likes: like_ids(41),
+            likes: Vec::new(),
         },
         // Star {
         //     id: 7,
@@ -191,7 +211,10 @@ fn create_stars(minio_public_url: &str, minio_bucket: &str) -> Vec<Star> {
             star_description: "Удалённая карточка используется для проверки бизнес-правила и не должна попадать ни на одну страницу интерфейса.".to_owned(),
             image_url: media_url(minio_public_url, minio_bucket, "images/m31-1494.webp"),
             video_url: media_url(minio_public_url, minio_bucket, "videos/m31-1494.mp4"),
-            likes: like_ids(12),
+            likes: Vec::new(),
         },
     ];
+
+    assign_likes_from_next_card(&mut stars);
+    stars
 }

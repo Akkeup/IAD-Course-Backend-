@@ -16,11 +16,15 @@ services:
     image: minio/mc:latest
     depends_on:
       - minio
+    volumes:
+      - ./static/media:/media:ro
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 ${ANDROMEDA_MINIO_ROOT_USER:-root} ${ANDROMEDA_MINIO_ROOT_PASSWORD:-rootpassword}; do sleep 1; done;
-      mc mb --ignore-existing local/${ANDROMEDA_MINIO_BUCKET:-andromeda-stars};
-      mc anonymous set download local/${ANDROMEDA_MINIO_BUCKET:-andromeda-stars};
+      mc mb --ignore-existing local/${ANDROMEDA_MINIO_BUCKET:-andromeda};
+      mc anonymous set download local/${ANDROMEDA_MINIO_BUCKET:-andromeda};
+      for file in /media/images/*; do if [ -f \"$$file\" ] && [ \"$${file##*/}\" != \".gitkeep\" ]; then mc cp \"$$file\" local/${ANDROMEDA_MINIO_BUCKET:-andromeda}/images/; fi; done;
+      for file in /media/videos/*; do if [ -f \"$$file\" ] && [ \"$${file##*/}\" != \".gitkeep\" ]; then mc cp \"$$file\" local/${ANDROMEDA_MINIO_BUCKET:-andromeda}/videos/; fi; done;
       "
 
 volumes:

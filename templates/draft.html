@@ -30,9 +30,11 @@
                     </label>
 
                     <label class="media-field">
-                        <video muted playsinline preload="metadata" poster="{{ star.image_url }}">
-                            <source src="{{ star.video_url }}" type="video/mp4">
-                        </video>
+                        <div
+                            class="media-field__preview"
+                            style="background-image: url('{{ star.image_url }}')"
+                            aria-hidden="true"
+                        ></div>
                         <span class="media-field__shade" aria-hidden="true"></span>
                         <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
                         <span>видео</span>
