@@ -6,6 +6,7 @@ use actix_web::{ResponseError, http::StatusCode};
 pub enum AppError {
     NotFound(String),
     Validation(String),
+    Database(String),
     Template(tera::Error),
 }
 
@@ -14,6 +15,7 @@ impl Display for AppError {
         match self {
             AppError::NotFound(message) => write!(formatter, "Не найдено: {}", message),
             AppError::Validation(message) => write!(formatter, "Ошибка параметров: {}", message),
+            AppError::Database(error) => write!(formatter, "Ошибка базы данных: {}", error),
             AppError::Template(error) => write!(formatter, "Ошибка шаблона: {}", error),
         }
     }
@@ -24,6 +26,7 @@ impl ResponseError for AppError {
         match self {
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::Validation(_) => StatusCode::BAD_REQUEST,
+            AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Template(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -32,5 +35,17 @@ impl ResponseError for AppError {
 impl From<tera::Error> for AppError {
     fn from(error: tera::Error) -> Self {
         AppError::Template(error)
+    }
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(error: sqlx::Error) -> Self {
+        AppError::Database(error.to_string())
+    }
+}
+
+impl From<sea_orm::DbErr> for AppError {
+    fn from(error: sea_orm::DbErr) -> Self {
+        AppError::Database(error.to_string())
     }
 }

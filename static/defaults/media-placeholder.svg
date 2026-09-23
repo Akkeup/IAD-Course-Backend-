@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Media placeholder</title>
+  <rect width="1200" height="800" fill="#25363b"/>
+  <circle cx="600" cy="370" r="92" fill="#d8d0b4" opacity=".85"/>
+  <path d="m575 315 120 55-120 55z" fill="#25363b"/>
+  <text x="600" y="650" fill="#fffbe9" font-family="sans-serif" font-size="36" text-anchor="middle">M31 / media unavailable</text>
+</svg>

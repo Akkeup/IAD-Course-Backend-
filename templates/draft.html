@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#1d1d1f">
-    <title>Черновик {{ star.name }} — M31 Galaxy Andromeda</title>
+    <title>{% if star.status == "draft" %}Черновик {{ star.name }}{% else %}Новая звезда{% endif %} — M31 Galaxy Andromeda</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -15,58 +15,96 @@
         <div class="page-shade" aria-hidden="true"></div>
 
         <section class="page-content">
-            <p class="status-label">Черновик</p>
-            <h1>Новая звезда</h1>
-            <p class="unsaved-badge">не сохранено</p>
+            <p class="status-label">{% if star.status == "draft" %}Черновик{% else %}Добавление{% endif %}</p>
+            <h1>{% if star.status == "draft" %}Опубликовать звезду{% else %}Новая звезда{% endif %}</h1>
+            <p class="unsaved-badge">{% if star.status == "draft" %}черновик в БД{% else %}не сохранено{% endif %}</p>
 
-            <form class="draft-form" action="/andromeda-stars/draft" method="get">
+            {% if star.status != "draft" %}
+            <form class="draft-form" action="/andromeda-stars/draft" method="post">
                 <div class="media-fields">
                     <label class="media-field">
-                        <img src="{{ star.image_url }}" alt="Изображение {{ star.name }}">
+                        <img
+                            src="{{ star.image_url }}"
+                            alt="Изображение по умолчанию"
+                            onerror="this.onerror=null;this.src='/static/defaults/andromeda-placeholder.svg';"
+                        >
                         <span class="media-field__shade" aria-hidden="true"></span>
                         <span class="media-field__icon" aria-hidden="true">▣</span>
                         <span>изображение</span>
-                        <input type="file" name="image" accept="image/*">
+                        <input type="file" accept="image/*" required>
                     </label>
 
                     <label class="media-field">
-                        <div
-                            class="media-field__preview"
-                            style="background-image: url('{{ star.image_url }}')"
+                        <img
+                            src="{{ star.image_url }}"
+                            alt=""
                             aria-hidden="true"
-                        ></div>
+                            onerror="this.onerror=null;this.src='/static/defaults/andromeda-placeholder.svg';"
+                        >
                         <span class="media-field__shade" aria-hidden="true"></span>
                         <span class="media-field__icon media-field__icon--play" aria-hidden="true">▷</span>
                         <span>видео</span>
-                        <input type="file" name="video" accept="video/*">
+                        <input type="file" accept="video/*" required>
                     </label>
                 </div>
 
                 <label class="field field--wide">
                     <span>Название звезды</span>
-                    <input type="text" name="name" value="{{ star.name }}">
+                    <input type="text" name="name" value="{{ star.name }}" required>
                 </label>
 
+                <button type="submit">Далее</button>
+            </form>
+            {% else %}
+            <form class="draft-form" action="/andromeda-stars/{{ star.id }}/publish" method="post">
                 <label class="field field--wide">
-                    <span>R от центра, кпк</span>
+                    <span>Название звезды</span>
+                    <input type="text" name="name" value="{{ star.name }}" required>
+                </label>
+
+                <div class="field-row">
+                    <label class="field">
+                        <span>Каталожный ID</span>
+                        <input type="text" name="catalog_id" value="{{ star.catalog_id }}" required>
+                    </label>
+
+                    <label class="field">
+                        <span>R от центра, кпк</span>
+                        <input
+                            type="number"
+                            name="distance_kpc"
+                            value="{{ star.distance_kpc }}"
+                            min="0"
+                            step="0.1"
+                            required
+                        >
+                    </label>
+                </div>
+
+                <label class="field field--wide">
+                    <span>Скорость, км/с</span>
                     <input
                         type="number"
-                        name="distance_kpc"
-                        value="{{ star.distance_kpc }}"
+                        name="velocity_kms"
+                        value="{{ star.velocity_kms }}"
                         min="0"
-                        step="0.1"
+                        step="1"
+                        required
                     >
                 </label>
 
                 <label class="field field--wide">
-                    <span>Описание</span>
-                    <textarea name="description" rows="5">{{ star.description }}</textarea>
+                    <span>Краткая информация</span>
+                    <textarea name="description" rows="5" required>{{ star.description }}</textarea>
                 </label>
+
+                <button type="submit">Опубликовать</button>
             </form>
+            {% endif %}
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item" href="/andromeda-stars">
+            <a class="nav-item" href="/andromeda-stars/first">
                 <span class="nav-icon" aria-hidden="true">●</span>
                 <span>Лента</span>
             </a>

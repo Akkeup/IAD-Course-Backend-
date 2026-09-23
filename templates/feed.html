@@ -13,6 +13,7 @@
             class="feed-media"
             src="{{ star.image_url }}"
             alt="Галактика Андромеда"
+            onerror="this.onerror=null;this.src='/static/defaults/andromeda-placeholder.svg';"
         >
 
         <div class="feed-shade" aria-hidden="true"></div>
@@ -54,6 +55,7 @@
             {% endif %}
 
             <h2 id="star-title">{{ star.name }}</h2>
+            <p class="catalog-id">{{ star.catalog_id }}</p>
 
             <div class="description">
                 <input
@@ -69,7 +71,7 @@
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item nav-item--active" href="/andromeda-stars" aria-current="page">
+            <a class="nav-item nav-item--active" href="/andromeda-stars/first" aria-current="page">
                 <span class="nav-icon" aria-hidden="true">●</span>
                 <span>Лента</span>
             </a>

@@ -18,3 +18,48 @@
 - `m31-504.webp`.
 
 После этого выполнить `docker compose up -d --force-recreate minio-init`.
+
+## Лабораторная работа 2: база данных
+
+Стек лабораторной работы: Rust, Actix-Web, Tera, SeaORM, SQLx и PostgreSQL.
+
+Первый инфраструктурный шаг поднимает PostgreSQL и Adminer:
+
+```sh
+docker compose up -d postgres adminer
+```
+
+- PostgreSQL: `127.0.0.1:5433` (внутри Compose: `postgres:5432`), база `andromeda`, пользователь `andromeda`, пароль `andromeda_password`;
+- Adminer: `http://127.0.0.1:8081`;
+- в Adminer выберите систему `PostgreSQL`, сервер `postgres`, базу `andromeda` и указанные учётные данные.
+
+При запуске backend SQLx автоматически применяет миграции из `migrations/`. Основная схема содержит три предметные таблицы без каскадного удаления:
+
+- `andromeda_users` — пользователи каталога;
+- `andromeda_stars` — карточки звёзд со статусами `draft`, `published`, `deleted`;
+- `andromeda_likes` — связь многие-ко-многим между пользователями и звёздами.
+
+Вторая миграция добавляет опубликованные карточки, один черновик и одну логически удалённую карточку. HTML-страницы работают от имени `andromeda_student`; другого пользователя можно выбрать через `ANDROMEDA_CURRENT_USERNAME`.
+
+Запуск backend:
+
+```sh
+cargo run
+```
+
+Адреса трёх страниц:
+
+- лента: `http://127.0.0.1:8080/andromeda-stars/first` или `/andromeda-stars/{id}`;
+- добавление и публикация: `http://127.0.0.1:8080/andromeda-stars/draft`;
+- плитка и поиск по расстоянию: `http://127.0.0.1:8080/andromeda-stars/grid?distance_kpc=20`.
+
+В приложении ровно шесть предметных HTTP-обработчиков:
+
+- `GET /andromeda-stars/{id}` — одна опубликованная звезда из БД;
+- `GET /andromeda-stars/draft` — черновик текущего пользователя;
+- `GET /andromeda-stars/grid` — плитка и поиск на стороне БД;
+- `POST /andromeda-stars/draft` — создание черновика через SeaORM;
+- `POST /andromeda-stars/{id}/publish` — публикация через SeaORM;
+- `POST /andromeda-stars/{id}/delete` — логическое удаление чистым SQL `UPDATE`.
+
+Получение, поиск, создание и публикация выполнены через SeaORM. Только удаление использует SQLx с ручным SQL-запросом. Пустые медиа-адреса заменяются файлами из `static/defaults/`; выбранные при создании файлы не имеют HTML-поля `name`, поэтому браузер не отправляет их на сервер.

@@ -52,22 +52,32 @@
                     data-has-more="{{ has_more }}"
                 >
                     {% for star in stars %}
-                        <a
-                            class="star-card"
-                            href="/andromeda-stars/{{ star.id }}"
-                            data-video-url="{{ star.video_url }}"
-                        >
+                        <article class="star-card">
                             <img
                                 src="{{ star.image_url }}"
                                 alt="{{ star.name }}"
                                 loading="lazy"
                                 decoding="async"
+                                onerror="this.onerror=null;this.src='/static/defaults/andromeda-placeholder.svg';"
                             >
                             <span class="star-card__shade" aria-hidden="true"></span>
+                            <a
+                                class="star-card__link"
+                                href="/andromeda-stars/{{ star.id }}"
+                                aria-label="Открыть {{ star.name }}"
+                            ></a>
 
                             {% if star.status == "draft" %}
                                 <span class="star-card__status">черновик</span>
                             {% endif %}
+
+                            <form
+                                class="star-card__delete"
+                                action="/andromeda-stars/{{ star.id }}/delete"
+                                method="post"
+                            >
+                                <button type="submit" aria-label="Удалить {{ star.name }}">×</button>
+                            </form>
 
                             <div class="star-card__body">
                                 <p class="star-card__distance">R = {{ star.distance_kpc }} кпк</p>
@@ -76,7 +86,7 @@
                                     {{ star.likes_count }} <span aria-hidden="true">♥</span>
                                 </span>
                             </div>
-                        </a>
+                        </article>
                     {% endfor %}
                 </div>
                 <div class="star-grid__sentinel" aria-hidden="true"></div>
@@ -90,7 +100,7 @@
         </section>
 
         <nav class="bottom-nav" aria-label="Основная навигация">
-            <a class="nav-item" href="/andromeda-stars">
+            <a class="nav-item" href="/andromeda-stars/first">
                 <span class="nav-icon" aria-hidden="true">●</span>
                 <span>Лента</span>
             </a>
