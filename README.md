@@ -178,7 +178,3 @@ cargo check --locked --offline
 cargo test --locked --offline
 cargo clippy --locked --offline --all-targets -- -A clippy::needless_return -D warnings
 ```
-
-Полное объяснение реализации находится в
-`docs/lab2-lab3-explanation.md`, ответы для защиты — в
-`docs/control-questions-lab2-lab3.md`.
