@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use actix_web::{ResponseError, http::StatusCode};
+use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -29,6 +29,10 @@ impl ResponseError for AppError {
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Template(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.status_code()).finish()
     }
 }
 

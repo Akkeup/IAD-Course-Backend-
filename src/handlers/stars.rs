@@ -16,7 +16,7 @@ use tera::{Context, Tera};
 use uuid::Uuid;
 
 use crate::{
-    database::{AppDatabase, current_andromeda_user_id},
+    database::{AppDatabase, current_user_id},
     errors::AppError,
     models::{
         StarTemplate,
@@ -28,22 +28,26 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct FeedQuery {
     next: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct StarsFilter {
     distance_kpc: Option<String>,
     page: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DraftForm {
     name: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PublishForm {
     name: String,
     catalog_id: String,
@@ -54,6 +58,9 @@ pub struct PublishForm {
 
 const DEFAULT_IMAGE_URL: &str = "/static/defaults/andromeda-placeholder.svg";
 const DEFAULT_VIDEO_URL: &str = "/static/defaults/andromeda-placeholder.mp4";
+const STAR_NAME_MAX_LENGTH: usize = 150;
+const CATALOG_ID_MAX_LENGTH: usize = 150;
+const DESCRIPTION_MAX_LENGTH: usize = 2_000;
 
 #[get("/andromeda-stars/{id}")]
 pub async fn get_star(
@@ -107,7 +114,7 @@ pub async fn get_draft(
     database: Data<AppDatabase>,
     templates: Data<Tera>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_andromeda_user_id(&database).await?;
+    let user_id = current_user_id(&database).await?;
     let star = Stars::find()
         .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
@@ -137,7 +144,7 @@ pub async fn create_draft(
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     validate_draft(&form)?;
-    let user_id = current_andromeda_user_id(&database).await?;
+    let user_id = current_user_id(&database).await?;
     let existing_draft = Stars::find()
         .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
@@ -176,7 +183,7 @@ pub async fn publish_draft(
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     validate_publish(&form)?;
-    let user_id = current_andromeda_user_id(&database).await?;
+    let user_id = current_user_id(&database).await?;
     let star_id = id.into_inner();
     let star = Stars::find_by_id(star_id)
         .filter(StarColumn::CreatedBy.eq(user_id))
@@ -191,8 +198,10 @@ pub async fn publish_draft(
     star.distance_kpc = Set(decimal_distance(form.distance_kpc)?);
     star.velocity_kms = Set(form.velocity_kms);
     star.star_description = Set(form.description.trim().to_owned());
+    let formed_at = Utc::now().fixed_offset();
     star.star_status = Set("published".to_owned());
-    star.updated_at = Set(Utc::now().fixed_offset());
+    star.updated_at = Set(formed_at);
+    star.formed_at = Set(Some(formed_at));
     star.update(&database.orm).await?;
 
     Ok(HttpResponse::SeeOther()
@@ -363,9 +372,9 @@ fn media_url(value: &str, fallback: &str) -> String {
 }
 
 fn decimal_distance(value: f32) -> Result<Decimal, AppError> {
-    if !value.is_finite() || value < 0.0 {
+    if !value.is_finite() || !(0.0..=9_999.99).contains(&value) {
         return Err(AppError::Validation(
-            "distance_kpc должен быть конечным неотрицательным числом".to_owned(),
+            "distance_kpc должен быть числом от 0 до 9999.99".to_owned(),
         ));
     }
     Decimal::from_f32_retain(value)
@@ -373,30 +382,35 @@ fn decimal_distance(value: f32) -> Result<Decimal, AppError> {
 }
 
 fn validate_draft(form: &DraftForm) -> Result<(), AppError> {
-    if form.name.trim().is_empty() {
-        return Err(AppError::Validation(
-            "название звезды обязательно".to_owned(),
-        ));
-    }
+    validate_text("название звезды", &form.name, STAR_NAME_MAX_LENGTH)?;
     Ok(())
 }
 
 fn validate_publish(form: &PublishForm) -> Result<(), AppError> {
-    if form.name.trim().is_empty() || form.catalog_id.trim().is_empty() {
-        return Err(AppError::Validation(
-            "название и каталожный ID обязательны".to_owned(),
-        ));
-    }
+    validate_text("название звезды", &form.name, STAR_NAME_MAX_LENGTH)?;
+    validate_text("каталожный ID", &form.catalog_id, CATALOG_ID_MAX_LENGTH)?;
     decimal_distance(form.distance_kpc)?;
     if form.velocity_kms < 0 {
         return Err(AppError::Validation(
             "velocity_kms должен быть неотрицательным числом".to_owned(),
         ));
     }
-    if form.description.trim().is_empty() {
-        return Err(AppError::Validation(
-            "краткое описание обязательно".to_owned(),
-        ));
+    validate_text(
+        "краткое описание",
+        &form.description,
+        DESCRIPTION_MAX_LENGTH,
+    )?;
+    Ok(())
+}
+
+fn validate_text(field: &str, value: &str, maximum_length: usize) -> Result<(), AppError> {
+    if value.trim().is_empty() {
+        return Err(AppError::Validation(format!("поле {field} обязательно")));
+    }
+    if value.trim().chars().count() > maximum_length {
+        return Err(AppError::Validation(format!(
+            "поле {field} не должно превышать {maximum_length} символов"
+        )));
     }
     Ok(())
 }
