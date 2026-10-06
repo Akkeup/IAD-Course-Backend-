@@ -205,7 +205,6 @@ pub async fn delete_star(
     id: Path<i64>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
-    // По условию лабораторной логическое удаление выполняется чистым SQL, без ORM.
     let result = sqlx::query(
         "UPDATE andromeda_stars SET star_status = 'deleted', updated_at = NOW() WHERE star_id = $1 AND star_status <> 'deleted'",
     )
@@ -355,12 +354,12 @@ fn media_url(value: &str, fallback: &str) -> String {
     let base = env::var("ANDROMEDA_MINIO_PUBLIC_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:9000".to_owned());
     let bucket = env::var("ANDROMEDA_MINIO_BUCKET").unwrap_or_else(|_| "andromeda".to_owned());
-    format!(
+    return format!(
         "{}/{}/{}",
         base.trim_end_matches('/'),
         bucket.trim_matches('/'),
         value.trim_start_matches('/')
-    )
+    );
 }
 
 fn decimal_distance(value: f32) -> Result<Decimal, AppError> {
