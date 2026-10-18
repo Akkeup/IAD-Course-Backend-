@@ -53,7 +53,7 @@
                     <input type="text" name="name" value="{{ star.name }}" required>
                 </label>
 
-                <button type="submit">Далее</button>
+                <button class="action-button action-button--wide" type="submit">Далее</button>
             </form>
             {% else %}
             <form class="draft-form" action="/andromeda-stars/{{ star.id }}/publish" method="post">
@@ -98,7 +98,7 @@
                     <textarea name="description" rows="5" required>{{ star.description }}</textarea>
                 </label>
 
-                <button type="submit">Опубликовать</button>
+                <button class="action-button action-button--wide" type="submit">Опубликовать</button>
             </form>
             {% endif %}
         </section>

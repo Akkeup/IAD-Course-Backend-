@@ -184,6 +184,7 @@ pub struct ApiStar {
     pub video_url: String,
     pub likes_count: i64,
     pub is_owner: i32,
+    pub is_liked: i32,
 }
 
 #[derive(Debug, Serialize)]

@@ -55,12 +55,12 @@ pub fn public_media_url(value: &str) -> String {
     let base = env::var("ANDROMEDA_MINIO_PUBLIC_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:9000".to_owned());
     let bucket = env::var("ANDROMEDA_MINIO_BUCKET").unwrap_or_else(|_| "andromeda".to_owned());
-    format!(
+    return format!(
         "{}/{}/{}",
         base.trim_end_matches('/'),
         bucket.trim_matches('/'),
         value.trim_start_matches('/')
-    )
+    );
 }
 
 async fn read_file(file: &TempFile) -> Result<Vec<u8>, AppError> {

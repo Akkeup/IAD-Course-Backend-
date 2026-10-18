@@ -268,6 +268,10 @@ async fn api_star(database: &AppDatabase, user_id: i64, star: Star) -> Result<Ap
         .filter(LikeColumn::StarId.eq(star.star_id))
         .count(&database.orm)
         .await?;
+    let is_liked = Likes::find_by_id((user_id, star.star_id))
+        .one(&database.orm)
+        .await?
+        .is_some();
 
     Ok(ApiStar {
         id: star.star_id,
@@ -281,6 +285,7 @@ async fn api_star(database: &AppDatabase, user_id: i64, star: Star) -> Result<Ap
         video_url: public_media_url(&star.video_url),
         likes_count: likes_count as i64,
         is_owner: i32::from(star.created_by == user_id),
+        is_liked: i32::from(is_liked),
     })
 }
 
