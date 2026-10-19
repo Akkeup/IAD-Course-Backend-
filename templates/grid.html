@@ -16,6 +16,7 @@
 
         <section class="page-content">
             <h1>Звёзды M31</h1>
+            <a class="form-note" href="/auth">{% if current_user_id %}Аккаунт{% else %}Войти{% endif %}</a>
 
             <form class="filter-form" action="/andromeda-stars/grid" method="get">
                 <label for="distance-kpc" class="visually-hidden">
@@ -71,6 +72,7 @@
                                 <span class="star-card__status">черновик</span>
                             {% endif %}
 
+                            {% if star.created_by == current_user_id %}
                             <form
                                 class="star-card__delete"
                                 action="/andromeda-stars/{{ star.id }}/delete"
@@ -78,6 +80,7 @@
                             >
                                 <button class="action-button action-button--icon" type="submit" aria-label="Удалить {{ star.name }}">×</button>
                             </form>
+                            {% endif %}
 
                             <div class="star-card__body">
                                 <p class="star-card__distance">R = {{ star.distance_kpc }} кпк</p>

@@ -1,7 +1,9 @@
+mod auth;
 mod database;
 mod errors;
 mod handlers;
 mod models;
+mod openapi;
 mod routes;
 
 use std::{env, format, io};
@@ -9,8 +11,10 @@ use std::{env, format, io};
 use actix_files::Files;
 use actix_web::{App, HttpServer, web::Data};
 use tera::Tera;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
-use crate::{database::connect, routes::config_routes};
+use crate::{auth::JwtAuth, database::connect, routes::config_routes};
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
@@ -20,6 +24,7 @@ async fn main() -> io::Result<()> {
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_owned());
     let bind_address = format!("{}:{}", host, port);
     let database_pool = connect().await?;
+    let auth = Data::new(JwtAuth::from_env().await?);
 
     let templates_glob = format!("{}/templates/**/*", env!("CARGO_MANIFEST_DIR"));
     let mut templates = Tera::new();
@@ -35,9 +40,15 @@ async fn main() -> io::Result<()> {
         "Andromeda Stars запущен: http://{}/andromeda-stars/first",
         bind_address
     );
+    println!("Swagger UI: http://{}/swagger-ui/", bind_address);
 
     HttpServer::new(move || {
         App::new()
+            .app_data(auth.clone())
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", openapi::ApiDoc::openapi()),
+            )
             .app_data(templates.clone())
             .app_data(database_pool.clone())
             .configure(config_routes)

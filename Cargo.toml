@@ -7,6 +7,10 @@ edition = "2024"
 actix-web = "4"
 actix-files = "0.6"
 actix-multipart = "0.7"
+jsonwebtoken = { version = "10", default-features = false, features = ["rust_crypto"] }
+redis = { version = "0.32", default-features = false, features = ["tokio-comp", "connection-manager"] }
+utoipa = { version = "5", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "9", features = ["actix-web", "vendored"] }
 argon2 = "0.5"
 dotenvy = "0.15"
 rust-s3 = { version = "0.37", default-features = false, features = ["tokio-rustls-tls", "fail-on-err"] }

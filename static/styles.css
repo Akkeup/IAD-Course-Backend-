@@ -856,3 +856,20 @@ a {
         padding: 0 12px;
     }
 }
+
+.auth-content {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.auth-content summary {
+    margin-bottom: 16px;
+    cursor: pointer;
+}
+
+.action-button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}

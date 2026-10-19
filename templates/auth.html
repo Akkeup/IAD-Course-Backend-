@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1d1d1f">
+    <title>Вход — M31 Galaxy Andromeda</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <main class="app-shell form-page">
+        <section class="page-content auth-content">
+            {% if username %}
+            <h1>Аккаунт</h1>
+            <p>Вы вошли как {{ username }}.</p>
+            <a class="action-button action-button--wide" href="/andromeda-stars/draft">Добавить звезду</a>
+            <button class="action-button action-button--wide" id="logout" type="button">Выйти</button>
+            {% else %}
+            <h1>Вход</h1>
+            <form class="draft-form" data-auth="login">
+                <label class="field"><span>Логин</span><input name="username" autocomplete="username" required maxlength="100"></label>
+                <label class="field"><span>Пароль</span><input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+                <button class="action-button action-button--wide" type="submit">Войти</button>
+            </form>
+            <details>
+                <summary>Создать аккаунт</summary>
+                <form class="draft-form" data-auth="register">
+                    <label class="field"><span>Логин</span><input name="username" autocomplete="username" required minlength="3" maxlength="100" pattern="[A-Za-z0-9_-]{3,100}"></label>
+                    <label class="field"><span>Пароль</span><input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
+                    <button class="action-button action-button--wide" type="submit">Зарегистрироваться</button>
+                </form>
+            </details>
+            {% endif %}
+            <p class="form-note" id="auth-message" role="status" aria-live="polite"></p>
+        </section>
+        <nav class="bottom-nav" aria-label="Основная навигация">
+            <a class="nav-item" href="/andromeda-stars/first"><span class="nav-icon" aria-hidden="true">●</span><span>Лента</span></a>
+            <a class="nav-item nav-item--active" href="/andromeda-stars/draft"><span class="nav-icon" aria-hidden="true">＋</span><span>Добавить</span></a>
+            <a class="nav-item" href="/andromeda-stars/grid"><span class="nav-icon" aria-hidden="true">▦</span><span>Плитка</span></a>
+        </nav>
+    </main>
+    <script>
+        const message = document.querySelector("#auth-message");
+        document.querySelectorAll("[data-auth]").forEach(form => {
+            form.addEventListener("submit", async event => {
+                event.preventDefault();
+                const button = form.querySelector("button");
+                button.disabled = true;
+                message.textContent = "";
+                try {
+                    const payload = Object.fromEntries(new FormData(form));
+                    const registering = form.dataset.auth === "register";
+                    const response = await fetch(registering ? "/api/users/register" : "/api/auth/login", {
+                        method: "POST", credentials: "same-origin",
+                        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) {
+                        message.textContent = response.status === 401 ? "Неверный логин или пароль." : "Не удалось выполнить запрос. Проверьте данные и уникальность логина.";
+                    } else if (registering) {
+                        message.textContent = "Аккаунт создан. Войдите с вашим логином и паролем.";
+                        document.querySelector('[data-auth="login"] [name="username"]').value = payload.username;
+                        form.reset();
+                        form.closest("details").open = false;
+                    } else {
+                        window.location.href = "/andromeda-stars/draft";
+                    }
+                } catch {
+                    message.textContent = "Сервер недоступен. Повторите попытку.";
+                } finally { button.disabled = false; }
+            });
+        });
+        document.querySelector("#logout")?.addEventListener("click", async () => {
+            try {
+                const response = await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+                if (response.ok) window.location.reload();
+                else message.textContent = "Не удалось выйти. Повторите попытку.";
+            } catch { message.textContent = "Сервер недоступен. Повторите попытку."; }
+        });
+    </script>
+</body>
+</html>

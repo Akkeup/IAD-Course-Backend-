@@ -70,6 +70,7 @@ pub mod andromeda_likes {
 #[derive(Debug, Serialize)]
 pub struct StarTemplate {
     pub id: i64,
+    pub created_by: i64,
     pub name: String,
     pub catalog_id: String,
     pub distance_kpc: String,

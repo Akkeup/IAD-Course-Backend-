@@ -1,7 +1,7 @@
 use std::env;
 
 use actix_web::{
-    HttpResponse, get,
+    HttpRequest, HttpResponse, get,
     http::header::{ContentType, LOCATION},
     post,
     web::{Data, Form, Path, Query},
@@ -16,7 +16,8 @@ use tera::{Context, Tera};
 use uuid::Uuid;
 
 use crate::{
-    database::{AppDatabase, current_user_id},
+    auth::{AuthenticatedUser, optional_user_id},
+    database::AppDatabase,
     errors::AppError,
     models::{
         StarTemplate,
@@ -111,10 +112,15 @@ pub async fn get_star(
 
 #[get("/andromeda-stars/draft")]
 pub async fn get_draft(
+    request: HttpRequest,
     database: Data<AppDatabase>,
     templates: Data<Tera>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+    let Some(user_id) = optional_user_id(&request).await else {
+        return Ok(HttpResponse::SeeOther()
+            .insert_header((LOCATION, "/auth"))
+            .finish());
+    };
     let star = Stars::find()
         .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
@@ -140,11 +146,12 @@ pub async fn get_draft(
 
 #[post("/andromeda-stars/draft")]
 pub async fn create_draft(
+    user: AuthenticatedUser,
     form: Form<DraftForm>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     validate_draft(&form)?;
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let existing_draft = Stars::find()
         .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
@@ -178,12 +185,13 @@ pub async fn create_draft(
 
 #[post("/andromeda-stars/{id}/publish")]
 pub async fn publish_draft(
+    user: AuthenticatedUser,
     id: Path<i64>,
     form: Form<PublishForm>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     validate_publish(&form)?;
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let star_id = id.into_inner();
     let star = Stars::find_by_id(star_id)
         .filter(StarColumn::CreatedBy.eq(user_id))
@@ -211,13 +219,15 @@ pub async fn publish_draft(
 
 #[post("/andromeda-stars/{id}/delete")]
 pub async fn delete_star(
+    user: AuthenticatedUser,
     id: Path<i64>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     let result = sqlx::query(
-        "UPDATE andromeda_stars SET star_status = 'deleted', updated_at = NOW() WHERE star_id = $1 AND star_status <> 'deleted'",
+        "UPDATE andromeda_stars SET star_status = 'deleted', updated_at = NOW() WHERE star_id = $1 AND created_by = $2 AND star_status <> 'deleted'",
     )
     .bind(id.into_inner())
+    .bind(user.id)
     .execute(&database.sql)
     .await?;
 
@@ -232,6 +242,7 @@ pub async fn delete_star(
 
 #[get("/andromeda-stars/grid")]
 pub async fn get_stars_grid(
+    request: HttpRequest,
     query: Query<StarsFilter>,
     database: Data<AppDatabase>,
     templates: Data<Tera>,
@@ -277,6 +288,10 @@ pub async fn get_stars_grid(
         .unwrap_or_default();
 
     let mut context = Context::new();
+    context.insert(
+        "current_user_id",
+        &optional_user_id(&request).await.unwrap_or(0),
+    );
     context.insert("has_stars", &!star_templates.is_empty());
     context.insert("stars", &star_templates);
     context.insert("distance_kpc", &raw_distance);
@@ -324,6 +339,7 @@ async fn render_feed(
 fn to_template(star: Star, likes_count: i64) -> StarTemplate {
     StarTemplate {
         id: star.star_id,
+        created_by: star.created_by,
         name: star.star_name,
         catalog_id: star.star_catalog_id,
         distance_kpc: star.distance_kpc.round_dp(1).to_string(),
@@ -339,6 +355,7 @@ fn to_template(star: Star, likes_count: i64) -> StarTemplate {
 fn empty_draft_template() -> StarTemplate {
     StarTemplate {
         id: 0,
+        created_by: 0,
         name: String::new(),
         catalog_id: String::new(),
         distance_kpc: "0.0".to_owned(),

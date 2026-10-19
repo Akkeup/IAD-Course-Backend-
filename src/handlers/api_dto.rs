@@ -1,5 +1,6 @@
 use actix_multipart::form::{MultipartForm, tempfile::TempFile, text::Text};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::errors::AppError;
 
@@ -9,14 +10,14 @@ const DESCRIPTION_MAX_LENGTH: usize = 2_000;
 const USERNAME_MAX_LENGTH: usize = 100;
 const PASSWORD_MAX_LENGTH: usize = 128;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiStarsFilter {
     pub distance_kpc: Option<String>,
     pub page: Option<u64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiFeedQuery {
     pub id: Option<i64>,
@@ -40,7 +41,7 @@ impl ApiCreateStarForm {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiPublishRequest {
     pub name: String,
@@ -89,7 +90,7 @@ impl ApiPublishRequest {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiLikeRequest {
     pub value: i32,
@@ -124,7 +125,7 @@ pub fn page_offset(page: Option<u64>, page_size: u64) -> Result<(u64, u64), AppE
     Ok((page, offset))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiRegisterRequest {
     pub username: String,
@@ -157,7 +158,7 @@ impl ApiRegisterRequest {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ApiAuthRequest {
     pub username: String,
@@ -171,7 +172,7 @@ impl ApiAuthRequest {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiStar {
     pub id: i64,
     pub name: String,
@@ -187,7 +188,7 @@ pub struct ApiStar {
     pub is_liked: i32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiStarsList {
     pub items: Vec<ApiStar>,
     pub page: u64,
@@ -227,4 +228,29 @@ fn validate_password(password: &str, minimum_length: usize) -> Result<(), AppErr
         )));
     }
     Ok(())
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApiUser {
+    pub id: i64,
+    pub username: String,
+}
+
+/// Файлы передаются в multipart/form-data, не в виде URL.
+#[derive(ToSchema)]
+#[allow(dead_code)]
+pub struct ApiCreateStarRequest {
+    pub name: String,
+    #[schema(value_type = String, format = Binary)]
+    pub image: String,
+    #[schema(value_type = String, format = Binary)]
+    pub video: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApiAuthResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: u64,
+    pub user: ApiUser,
 }

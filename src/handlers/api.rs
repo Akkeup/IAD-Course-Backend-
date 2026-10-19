@@ -1,6 +1,6 @@
 use actix_multipart::form::MultipartForm;
 use actix_web::{
-    HttpResponse, delete, get, post, put,
+    HttpRequest, HttpResponse, delete, get, post, put,
     web::{Data, Json, Path, Query},
 };
 use chrono::Utc;
@@ -11,7 +11,8 @@ use sea_orm::{
 use uuid::Uuid;
 
 use crate::{
-    database::{AppDatabase, current_user_id},
+    auth::{AuthenticatedUser, optional_user_id},
+    database::AppDatabase,
     errors::AppError,
     handlers::{
         api_dto::{
@@ -30,12 +31,18 @@ use crate::{
 
 const PAGE_SIZE: u64 = 20;
 
+#[utoipa::path(get, path = "/api/andromeda-stars", tag = "Звёзды",
+    params(("distance_kpc" = Option<String>, Query, description = "Максимальный радиус, кпк"),
+           ("page" = Option<u64>, Query, description = "Номер страницы, начиная с 1")),
+    responses((status = 200, description = "Опубликованные звёзды. Гостю is_owner и is_liked возвращаются как 0", body = ApiStarsList),
+              (status = 400, description = "Неверный фильтр"))) ]
 #[get("/andromeda-stars")]
 pub async fn api_get_stars(
+    request: HttpRequest,
     query: Query<ApiStarsFilter>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+    let user_id = optional_user_id(&request).await;
     let maximum_distance = parse_distance(query.distance_kpc.as_deref())?;
     let (page, offset) = page_offset(query.page, PAGE_SIZE)?;
 
@@ -63,12 +70,18 @@ pub async fn api_get_stars(
     }))
 }
 
+#[utoipa::path(get, path = "/api/andromeda-stars/feed", tag = "Звёзды",
+    params(("id" = Option<i64>, Query, description = "Без id — первая опубликованная звезда"),
+           ("next" = Option<bool>, Query, description = "true — следующая после id, с переходом к началу")),
+    responses((status = 200, description = "Звезда в ленте", body = ApiStar),
+              (status = 400, description = "Неверные параметры"), (status = 404, description = "Звёзды не найдены"))) ]
 #[get("/andromeda-stars/feed")]
 pub async fn api_get_feed(
+    request: HttpRequest,
     query: Query<ApiFeedQuery>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+    let user_id = optional_user_id(&request).await;
     let requested_id = query.id.map(validate_resource_id).transpose()?;
     let star = match (requested_id, query.next.unwrap_or(false)) {
         (None, _) => first_published_star(&database).await?,
@@ -85,9 +98,16 @@ pub async fn api_get_feed(
     Ok(HttpResponse::Ok().json(api_star(&database, user_id, star).await?))
 }
 
+#[utoipa::path(get, path = "/api/andromeda-stars/draft", tag = "Звёзды",
+    security(("bearerAuth" = [])),
+    responses((status = 200, description = "Единственный черновик текущего пользователя", body = ApiStar),
+              (status = 401, description = "Требуется вход"), (status = 404, description = "Черновика нет"))) ]
 #[get("/andromeda-stars/draft")]
-pub async fn api_get_draft(database: Data<AppDatabase>) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+pub async fn api_get_draft(
+    user: AuthenticatedUser,
+    database: Data<AppDatabase>,
+) -> Result<HttpResponse, AppError> {
+    let user_id = user.id;
     let star = Stars::find()
         .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
@@ -95,15 +115,22 @@ pub async fn api_get_draft(database: Data<AppDatabase>) -> Result<HttpResponse, 
         .await?
         .ok_or_else(|| AppError::NotFound("черновик текущего пользователя".to_owned()))?;
 
-    Ok(HttpResponse::Ok().json(api_star(&database, user_id, star).await?))
+    Ok(HttpResponse::Ok().json(api_star(&database, Some(user_id), star).await?))
 }
 
+#[utoipa::path(post, path = "/api/andromeda-stars", tag = "Звёзды",
+    security(("bearerAuth" = [])),
+    request_body(content = crate::handlers::api_dto::ApiCreateStarRequest, content_type = "multipart/form-data"),
+    responses((status = 201, description = "Черновик создан, автор взят из JWT; файлы сохранены в MinIO"),
+              (status = 400, description = "Неверные поля, файлы или уже есть черновик"),
+              (status = 401, description = "Требуется вход"))) ]
 #[post("/andromeda-stars")]
 pub async fn api_create_star(
+    user: AuthenticatedUser,
     MultipartForm(form): MultipartForm<ApiCreateStarForm>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let name = form.validated_name()?;
 
     let existing_draft = Stars::find()
@@ -144,21 +171,31 @@ pub async fn api_create_star(
     Ok(HttpResponse::Created().finish())
 }
 
+#[utoipa::path(put, path = "/api/andromeda-stars/{id}/publish", tag = "Звёзды",
+    security(("bearerAuth" = [])), params(("id" = i64, Path, description = "ID черновика")),
+    request_body = ApiPublishRequest,
+    responses((status = 204, description = "Поля обновлены, статус published"),
+              (status = 400, description = "Неверные поля"), (status = 401, description = "Требуется вход"),
+              (status = 403, description = "Чужая звезда"), (status = 404, description = "Черновик не найден"))) ]
 #[put("/andromeda-stars/{id}/publish")]
 pub async fn api_publish_star(
+    user: AuthenticatedUser,
     id: Path<i64>,
     payload: Json<ApiPublishRequest>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     let payload = payload.validate()?;
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let star_id = validate_resource_id(id.into_inner())?;
     let star = Stars::find_by_id(star_id)
-        .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.eq("draft"))
         .one(&database.orm)
         .await?
         .ok_or_else(|| AppError::NotFound("черновик текущего пользователя".to_owned()))?;
+
+    if star.created_by != user_id {
+        return Err(AppError::Forbidden);
+    }
 
     let mut star: ActiveStar = star.into();
     star.star_name = Set(payload.name);
@@ -175,19 +212,28 @@ pub async fn api_publish_star(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[utoipa::path(delete, path = "/api/andromeda-stars/{id}", tag = "Звёзды",
+    security(("bearerAuth" = [])), params(("id" = i64, Path, description = "ID своей звезды")),
+    responses((status = 204, description = "Soft delete: статус deleted"),
+              (status = 401, description = "Требуется вход"), (status = 403, description = "Чужая звезда"),
+              (status = 404, description = "Активная звезда не найдена"))) ]
 #[delete("/andromeda-stars/{id}")]
 pub async fn api_delete_star(
+    user: AuthenticatedUser,
     id: Path<i64>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let star_id = validate_resource_id(id.into_inner())?;
     let star = Stars::find_by_id(star_id)
-        .filter(StarColumn::CreatedBy.eq(user_id))
         .filter(StarColumn::StarStatus.is_in(["draft", "published"]))
         .one(&database.orm)
         .await?
         .ok_or_else(|| AppError::NotFound("активная звезда текущего пользователя".to_owned()))?;
+
+    if star.created_by != user_id {
+        return Err(AppError::Forbidden);
+    }
 
     let mut star: ActiveStar = star.into();
     star.star_status = Set("deleted".to_owned());
@@ -197,15 +243,22 @@ pub async fn api_delete_star(
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[utoipa::path(post, path = "/api/andromeda-stars/{id}/like", tag = "Лайки",
+    security(("bearerAuth" = [])), params(("id" = i64, Path, description = "ID опубликованной звезды")),
+    request_body = ApiLikeRequest,
+    responses((status = 204, description = "Лайк поставлен (1) или отменён (0) от текущего пользователя"),
+              (status = 400, description = "value должен быть 0 или 1"), (status = 401, description = "Требуется вход"),
+              (status = 404, description = "Опубликованная звезда не найдена"))) ]
 #[post("/andromeda-stars/{id}/like")]
 pub async fn api_like_star(
+    user: AuthenticatedUser,
     id: Path<i64>,
     payload: Json<ApiLikeRequest>,
     database: Data<AppDatabase>,
 ) -> Result<HttpResponse, AppError> {
     let like_value = payload.validate()?;
 
-    let user_id = current_user_id(&database).await?;
+    let user_id = user.id;
     let star_id = validate_resource_id(id.into_inner())?;
     Stars::find_by_id(star_id)
         .filter(StarColumn::StarStatus.eq("published"))
@@ -263,15 +316,23 @@ async fn next_published_star(
     }
 }
 
-async fn api_star(database: &AppDatabase, user_id: i64, star: Star) -> Result<ApiStar, AppError> {
+async fn api_star(
+    database: &AppDatabase,
+    user_id: Option<i64>,
+    star: Star,
+) -> Result<ApiStar, AppError> {
     let likes_count = Likes::find()
         .filter(LikeColumn::StarId.eq(star.star_id))
         .count(&database.orm)
         .await?;
-    let is_liked = Likes::find_by_id((user_id, star.star_id))
-        .one(&database.orm)
-        .await?
-        .is_some();
+    let is_liked = if let Some(user_id) = user_id {
+        Likes::find_by_id((user_id, star.star_id))
+            .one(&database.orm)
+            .await?
+            .is_some()
+    } else {
+        false
+    };
 
     Ok(ApiStar {
         id: star.star_id,
@@ -284,7 +345,7 @@ async fn api_star(database: &AppDatabase, user_id: i64, star: Star) -> Result<Ap
         image_url: public_media_url(&star.image_url),
         video_url: public_media_url(&star.video_url),
         likes_count: likes_count as i64,
-        is_owner: i32::from(star.created_by == user_id),
+        is_owner: i32::from(Some(star.created_by) == user_id),
         is_liked: i32::from(is_liked),
     })
 }

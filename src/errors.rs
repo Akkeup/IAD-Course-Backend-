@@ -4,6 +4,9 @@ use actix_web::{HttpResponse, ResponseError, http::StatusCode};
 
 #[derive(Debug)]
 pub enum AppError {
+    Unauthorized,
+    Forbidden,
+    Auth(String),
     NotFound(String),
     Validation(String),
     Database(String),
@@ -13,6 +16,9 @@ pub enum AppError {
 impl Display for AppError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
         match self {
+            AppError::Unauthorized => write!(formatter, "Требуется вход в систему"),
+            AppError::Forbidden => write!(formatter, "Доступ запрещён"),
+            AppError::Auth(error) => write!(formatter, "Ошибка авторизации: {}", error),
             AppError::NotFound(message) => write!(formatter, "Не найдено: {}", message),
             AppError::Validation(message) => write!(formatter, "Ошибка параметров: {}", message),
             AppError::Database(error) => write!(formatter, "Ошибка базы данных: {}", error),
@@ -24,6 +30,9 @@ impl Display for AppError {
 impl ResponseError for AppError {
     fn status_code(&self) -> StatusCode {
         match self {
+            AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+            AppError::Forbidden => StatusCode::FORBIDDEN,
+            AppError::Auth(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotFound(_) => StatusCode::NOT_FOUND,
             AppError::Validation(_) => StatusCode::BAD_REQUEST,
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
